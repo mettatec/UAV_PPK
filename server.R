@@ -1,0 +1,1152 @@
+source("global.R")
+source("modules/homePoint-module.R")
+
+
+#Server
+shinyServer(function(input, output, session) {
+    ##Lee los usuarios del archivo temporal
+    drive_auth(cache = ".secrets")
+    #importante cambiar a user_base
+    drive_download("user_base.csv", overwrite = TRUE)
+    user_base <- read.csv("user_base.csv", header = TRUE)
+    
+    ## Valores reactivos para guardar los usuarios 
+    usuarios<- reactiveValues()
+    ##Guada los usuarios del archivo temporal en los valores reactivos
+    usuarios$datos <- user_base
+    
+    ## Lee las credenciales y las sesiones
+    credentials <- callModule(
+        shinyauthr::login,
+        id = "login",
+        data = user_base,
+        user_col = user,
+        pwd_col = password,
+        sodium_hashed = TRUE,
+        log_out = reactive(logout_init())
+    )
+
+    ## Llama a módulo de logout desde la paquetería shinyauthr
+    logout_init <- callModule(
+        shinyauthr::logout,
+        id = "logout",
+        active = reactive(credentials()$user_auth)
+    )
+    
+    
+    user_data <- reactive({
+        credentials()$info
+    })
+    
+    ## Lee el archivo de antenas y el archivo de marcas de antenas
+    antenas <- read.delim("www/AntenasNGS20.atx", sep = "\t", header = FALSE)
+    marcasAntenas <- read.csv("www/AntenasMarcas.csv", sep = ",", header = TRUE)
+    
+    antenasList <- data.frame(
+      model = gsub(" .*","",antenas[grep("TYPE / SERIAL NO", antenas$V1),])
+    )
+    
+    choicesMarcasList <- marcasAntenas[,1]
+    names(choicesMarcasList) <- marcasAntenas$name
+    ## Crea la interfaz dependiendo de las credenciales de usuario
+    
+    output$panelPrincipal<- renderUI(
+        expr = if(!is.null(user_data()$permissions) && user_data()$permissions %in% "admin"){
+            
+            req(credentials()$user_auth)
+            req(user_data()$permissions %in% "admin")
+            
+            fluidRow(
+                box( 
+                    status = "primary",
+                    width = 11,
+                    
+                    
+                    div(style="align-content: center;",
+                        column(width = 12,
+                               h2("Usuarios"),
+                               dataTableOutput("user_table"),
+                               br(),
+                               br(),
+                               fluidRow(
+                                   column(width = 2, actionButton("eliminar", label = "Eliminar",  class = "btn-new")),
+                                   column(width = 2, actionButton("nuevo", label = "Nuevo",  class = "btn-new")),
+                                   column(width = 2, actionButton("allowLog", label = "Enable",  class = "btn-info")),
+                                   column(width = 2, actionButton("disableLog", label = "Disable",  class = "btn-info"))
+                               )
+                        )
+                    )
+                )
+            )
+            
+                
+        } else if(!is.null(user_data()$permissions) && user_data()$permissions %in% "standard" && user_data()$Allow_login == TRUE) {
+            
+            fluidRow(
+                box(
+                    status = "primary",
+                    solidHeader = TRUE,
+                    width = 3,
+                    title = "Controls",
+                    radioButtons("modo", label = "Select Model UAV",
+                                 choices = list("PHANTOM 4RTK / MATRICE 300 RTK / MAVIC 3E" = "mrkMode", "KIT PPK PHANTOM 4 - REACH" = "reach", "KIT PPK Phantom 4 Pro - X5 Metta" = "x5metta"), 
+                                 selected = "mrkMode"),
+                    uiOutput("controlEventsOrMrk"),
+                    tabsetPanel(
+                      tabPanel("Files",
+                               fileInput("obsFile", label = "Observations File (.obs)", accept = c(".obs", ".*O", ".*o")),
+                               fileInput("O20File", label = "Base File (.20O)", accept = c(".*O", ".*o")),
+                               fileInput("navFiles", label = "Navigation Files (*)", multiple = TRUE, accept = c(".*nav", ".*P", ".*N", ".*G", ".*H", ".*Q", ".*C", ".*L", ".*I", ".sp3", ".eph", ".clk")),
+                               checkboxInput("isDMS", label = "Degrees/Meters/Seconds", value = FALSE),
+                               uiOutput("refBasePanel"),
+                               numericInput("AltBase", label = "Alt (m):", value = NULL),
+                               numericInput("PoleLeng", label = "Pole Length (m):", value= NULL)
+                               ),
+                      tabPanel("Settings",
+                               selectInput("pos1soltype", label = "Filter Type", 
+                                           choices = list("Combined"= "combined","Forward" = "forward","Backward" = "backward")),
+                               selectInput("pos2armode", label = "Integer Ambiguity", 
+                                           choices = list("Fix and Hold"="fix-and-hold", "Instantaneous" = "instantaneous","Continuous" ="continuous"),
+                                           selected = ""),
+                               radioButtons("timeFormat", label = "Time Format",
+                                            choices = list("GPST"="gpst", "UTC"="utc"), inline = TRUE,
+                                            selected = "gpst"),
+                               checkboxGroupInput("pos1navsys", label = "Constellations", inline = TRUE,
+                                                  choices = list("GPS" = 2, "GLONASS" = 8, "Galileo" = 16, "BeoiDou" = 64),
+                                                  selected = list("GPS" = 2, "GLONASS" = 8, "BeoiDou" = 64)),
+                               selectInput("marcasAntenas", label = "Antena Type",
+                                           choices = choicesMarcasList, selected = 0),
+                               uiOutput("renderAntenaInputs")
+                               )
+                    ),
+                    actionButton("muestraArchivos", "Show"),
+                    uiOutput("mostrarResultados"),
+                    uiOutput("botonDescarga")
+                
+                ),
+                tabBox(
+                    title = "Interpolation",
+                    width = 9,
+                    height = "1100px",
+                    id = "tabset1",
+                    tabPanel("Data", 
+                             div(
+                                 h4("Files"),
+                                 div(
+                                     box( 
+                                         status = "primary",
+                                         width = 6,
+                                         div(
+                                             h4("File (.pos)"),
+                                             dataTableOutput("tablaRinex")
+                                         )
+                                     ),
+                                     
+                                     box(
+                                         status = "primary",
+                                         width = 6,
+                                         div(
+                                             uiOutput("fileTitle"),
+                                             dataTableOutput("tablaMrk")
+                                         )
+                                     )
+                                     
+                                 )
+                                 
+                                 )
+                             ),
+                    tabPanel("Results", 
+                             div(
+                                 div(
+                                     box( 
+                                         status = "primary",
+                                         width = 12,
+                                         div(
+                                             leafletOutput("mapa")
+                                         )
+                                     ),
+                                     
+                                     box(
+                                         status = "primary",
+                                         width = 12,
+                                         div(
+                                             dataTableOutput("tablaResultados")
+                                         )
+                                     )
+                                     
+                                 )
+                                 
+                             )
+                             )
+                )
+            )
+        
+        } else if(!is.null(user_data()$permissions) && user_data()$permissions %in% "standard" && user_data()$Allow_login == FALSE){
+           fluidRow(
+             column(12,
+                   div(style = "margin:30px; padding:10px; background-color:#E2E1E1;",
+                     h2(paste0("Dear user: ", user_data()$name, ", your subscription has expired, please contact technical support")),
+                     h4(a("soporte@solucionesgeograficas.pe", href = " mailto:soporte@solucionesgeograficas.pe", target = "_blank"))
+                   )
+                    )
+           )
+        }
+    )
+    
+    
+    ### Crea la tabla para visualizar usuarios
+    output$user_table <- renderDataTable({
+        
+        # use req to only render results when credentials()$user_auth is TRUE
+        req(credentials()$user_auth)
+        req(user_data()$permissions %in% "admin")
+    
+        data <- usuarios$datos
+        
+        datatable(data[,c("user", "permissions", "name", "Allow_login")], options = list(
+            pageLength = 10,
+            scrollX = TRUE
+        ))
+    })
+    
+    ### Ventana emergente para introducir datos de nuevo usuario
+    observeEvent(input$nuevo,{
+        showModal(
+            modalDialog(
+                title = "Nuevo usuario",
+                fluidRow(
+                    column(width = 12,
+                           textInput("usuario", label = h4("Usuario")),
+                           passwordInput("password",label = h4("Constraseña")),
+                           radioButtons("permisos", label = h4("Permiso"),
+                                        choiceNames = c("Usuario","Administrador"),
+                                        choiceValues = c("standard","admin")
+                           ),
+                           textInput("nombre",label = h4("Nombres")),
+                           radioButtons("allowUser", label = h4("Permitir usar la app"),
+                                        choiceNames = c("Permitir","No permitir"),
+                                        choiceValues = c(TRUE,FALSE)
+                           )
+                    )
+                ),
+                easyClose = FALSE,
+                footer = tagList(
+                    actionButton("cancelar","Cancel"),
+                    actionButton("guardar","Guardar")
+                )
+            )
+        )
+    })
+    
+    ## Cierra cualquier modal al momento de dar cancelar
+    observeEvent(input$cancelar,{
+        removeModal()
+    })
+    
+    ## Modifica el archivo temporal donde están guardados los usuarios
+    observeEvent(input$guardar,{
+        req(credentials()$user_auth)
+        req(user_data()$permissions %in% "admin")
+        
+        if(nchar(input$usuario)<1 || nchar(input$password)<1 ||
+           nchar(input$nombre)<1){
+            showNotification(
+                h4("Debes completar todos los campos"), 
+                action = NULL, duration = 5, type = "warning")
+        } else {
+            
+            drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+            usuarios_base <- read.csv("www/user_base.csv", header = TRUE)
+            
+            if(length(which(usuarios_base$user %in% input$usuario))>0){
+                showNotification(
+                    h4("El nombre de usuario ya existe"), 
+                    action = NULL, duration = 5, type = "warning")   
+            } else {
+                nuevoUsuario<- c(input$usuario, password_store(input$password), input$permisos, input$nombre, input$allowUser)
+                
+                nuevaTabla<- rbind(usuarios_base, nuevoUsuario)
+                
+                ##Sobreescribe temporalmente los nuevos usuarios
+                write.csv(nuevaTabla, "www/user_base.csv", row.names = FALSE)
+                drive_upload("www/user_base.csv", overwrite = TRUE)
+                
+                drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+                usuarios$datos <- read.csv("www/user_base.csv", header = TRUE)
+                
+                removeModal()
+                
+                showNotification(
+                    h4("Creación exitosa"), 
+                    action = NULL, duration = 5, type = "message")
+                
+                
+            }
+            
+        }
+    })
+    
+    ####Valores reactivos que guardaran info de las selecciones en la tabla
+    selecciones_tabla<- reactiveValues()
+    #### Ventana emergente para advertir de que se van a eliminar usuarios
+    observeEvent(input$eliminar,{
+        
+        if(length(input$user_table_rows_selected)>0){
+            showModal(
+                modalDialog(title = "Borrar",
+                            fluidPage(column(12,h3("Cuidado: Estás a punto de borrar usuarios de la base de datos"),style="color:red;")),
+                            easyClose = FALSE,
+                            size = "m",
+                            footer = tagList(
+                                actionButton("cancelar","Cancel"),
+                                actionButton("borrar_usuario","Eliminar")
+                            ) 
+                )
+            )
+        } else {
+            showNotification(
+                h4("Selecciona un renglón"), 
+                action = NULL, duration = 5, type = "warning") 
+        }
+        
+    })
+    
+    observeEvent(input$borrar_usuario,{
+        req(credentials()$user_auth)
+        req(user_data()$permissions %in% "admin")
+        req(input$user_table_rows_selected)
+        
+        selecciones_tabla$renglon<-input$user_table_rows_selected
+        user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
+        
+        drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+        usuarios_base <- read.csv("www/user_base.csv", header = TRUE)
+        
+        nuevaTabla<-usuarios_base[! usuarios_base$user %in% user_removed,]
+        
+        ##Guarda temporalmente os cambios
+        write.csv(nuevaTabla, "www/user_base.csv", row.names = FALSE)
+        drive_upload("www/user_base.csv", overwrite = TRUE)
+        
+        drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+        usuarios$datos <- read.csv("www/user_base.csv", header = TRUE)
+        
+        
+        removeModal()
+        
+        showNotification(
+            h4("Usuario(s) eliminado con éxito"), 
+            action = NULL, duration = 5, type = "message")
+        
+           
+    })
+    
+    observeEvent(input$allowLog,{
+      req(credentials()$user_auth)
+      req(user_data()$permissions %in% "admin")
+      req(input$user_table_rows_selected)
+      
+      selecciones_tabla$renglon<-input$user_table_rows_selected
+      user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
+      
+      drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+      usuarios_base <- read.csv("www/user_base.csv", header = TRUE)
+      
+      usuarios_base[which( usuarios_base$user %in% user_removed),"Allow_login"] = TRUE
+     
+      nuevaTabla <- usuarios_base
+        
+      ##Guarda temporalmente os cambios
+      write.csv(nuevaTabla, "www/user_base.csv", row.names = FALSE)
+      drive_upload("www/user_base.csv", overwrite = TRUE)
+      
+      drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+      usuarios$datos <- read.csv("www/user_base.csv", header = TRUE)
+      
+      
+      removeModal()
+      
+      showNotification(
+        h4("Usuario(s) actualizados con éxito"), 
+        action = NULL, duration = 5, type = "message")
+      
+      
+    })
+    
+    
+    observeEvent(input$disableLog,{
+      req(credentials()$user_auth)
+      req(user_data()$permissions %in% "admin")
+      req(input$user_table_rows_selected)
+      
+      selecciones_tabla$renglon<-input$user_table_rows_selected
+      user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
+      
+      drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+      usuarios_base <- read.csv("www/user_base.csv", header = TRUE)
+      
+      usuarios_base[which( usuarios_base$user %in% user_removed),"Allow_login"] = FALSE
+    
+      nuevaTabla <- usuarios_base
+      
+      ##Guarda temporalmente os cambios
+      write.csv(nuevaTabla, "www/user_base.csv", row.names = FALSE)
+      drive_upload("www/user_base.csv", overwrite = TRUE)
+      
+      drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+      usuarios$datos <- read.csv("www/user_base.csv", header = TRUE)
+      
+      
+      removeModal()
+      
+      showNotification(
+        h4("Usuario(s) actualizados con éxito"), 
+        action = NULL, duration = 5, type = "message")
+      
+      
+    })
+    
+    
+    ## Panel generado al escoger uno de los dos modos de interpolación
+    output$controlEventsOrMrk <- renderUI(
+        expr = if(input$modo %in% "mrkMode"){
+            div(
+                fileInput("mrkOrEventsFile", label = "Mrk File (.MRK)", accept = c(".MRK",".mrk"))
+            )
+        } else if(input$modo %in% "reach"){
+            div(
+                fileInput("mrkOrEventsFile", label = "Events File (.pos)", accept = c(".pos", ".POS")),
+                numericInput("defaultNumber", "Indicate time delay (seconds)", value = 0.3)
+            )
+        } else if(input$modo %in% "x5metta"){
+          div(
+               fileInput("mrkOrEventsFile", label = "Events File (.pos)", accept = c(".pos", ".POS")),
+              numericInput("defaultNumber", "Indicate time delay (seconds)", value = 0.3)
+          )
+        } else {
+          NULL
+        }
+    )
+    
+    ## panel de inputs de antenas generado de acuerdo al input de marcas de antena
+    output$renderAntenaInputs <- renderUI({
+      
+      choicesMarcas <- antenasList[grep(gsub(" ","",input$marcasAntenas), antenasList$model),]
+      
+      selectInput("antenas", label = "Antena Model", 
+                  choices = choicesMarcas, 
+                  selected = "3COAG35")
+    })
+    
+    ## Panel de referencia base generado de acuero al input de grados o grados minutos
+    output$refBasePanel <- renderUI(expr = if(input$isDMS){
+      fluidRow(
+        column(12, 
+               p("Latitude"),
+               div(style="display: inline-block;vertical-align:top; width: 70px;", numericInput("degLatBase", label = NULL,value = NULL)),
+               div(style="display: inline-block;vertical-align:top; width: 10px;",h3("°", style="margin-top: 0px")),
+               div(style="display: inline-block;vertical-align:top; width: 70px;", numericInput("minLatBase", label = NULL,value = NULL)),
+               div(style="display: inline-block;vertical-align:top; width: 10px;",h3("'", style="margin-top: 0px")),
+               div(style="display: inline-block;vertical-align:top; width: 70px;", numericInput("secLatBase", label = NULL,value = NULL)),
+               div(style="display: inline-block;vertical-align:top; width: 10px;",h3("''", style="margin-top: 0px")),
+               div(style="display: inline-block;vertical-align:top; width: 60px;", selectInput("cardinalLatBase",label= NULL,choices = c("N", "S"), selected = "N")),
+               p("Longitude"),
+               div(style="display: inline-block;vertical-align:top; width: 70px;", numericInput("degLongBase", label = NULL,value = NULL)),
+               div(style="display: inline-block;vertical-align:top; width: 10px;",h3("°", style="margin-top: 0px")),
+               div(style="display: inline-block;vertical-align:top; width: 70px;", numericInput("minLongBase", label = NULL,value = NULL)),
+               div(style="display: inline-block;vertical-align:top; width: 10px;",h3("'", style="margin-top: 0px")),
+               div(style="display: inline-block;vertical-align:top; width: 70px;", numericInput("secLongBase", label = NULL,value = NULL)),
+               div(style="display: inline-block;vertical-align:top; width: 10px;",h3("''", style="margin-top: 0px")),
+               div(style="display: inline-block;vertical-align:top; width: 60px;", selectInput("cardinalLongBase",label= NULL,choices = c("W", "E"), selected = "W"))
+               
+        )
+      )
+    } else {
+      div(
+        numericInput("LatBase", label = "Latitud (°):", value = NULL),
+        numericInput("LonBase", label = "Longitud (°):", value = NULL),
+        
+      )
+    })
+    
+    ##Título generado por el tipo de archivo
+    output$fileTitle<- renderUI(expr = if(input$modo %in% "mrkMode"){
+        h4("File (.Mrk)")
+    } else if(input$modo %in% "reach") {
+        h4("Events File (.pos)")
+    } else if(input$modo %in% "x5metta") {
+      h4("Events File (.pos)")
+    } else {
+      NULL
+    })
+    
+    ##Valores reactivos que guardaran datos de los archivos y de los resultados
+    datos<- reactiveValues()
+    
+    observeEvent(input$muestraArchivos,{
+      
+        req(input$obsFile)
+        req(input$navFiles)
+        req(input$O20File)
+        req(input$mrkOrEventsFile)
+        
+        ### Se asegura de que se tenga un valor de coordenadas para la base
+        print(input$LatBase)
+        if(input$isDMS){
+          if(is.na(input$degLatBase) || is.na(input$minLatBase) || is.na(input$secLatBase) || 
+             is.na(input$degLongBase) || is.na(input$minLongBase) || is.na(input$secLongBase) ||
+             is.na(input$AltBase) || is.na(input$PoleLeng)){
+            showNotification(
+              h4("Make sure to type all fields"), 
+              action = NULL, duration = 5, type = "warning")
+            return()
+          }
+        } else {
+          if(is.na(input$LatBase) || is.na(input$LonBase) || is.na(input$AltBase) || is.na(input$PoleLeng)){
+            showNotification(
+              h4("Make sure to type all fields"), 
+              action = NULL, duration = 5, type = "warning")
+            return()
+          }
+        }
+        
+        
+        #### Se asegura que los archivos tengan la extensión correcta
+        if(length(grep(".obs|.*O|.*o",input$obsFile$name )) == 0 || 
+           length(grep(".*O|.*o",input$O20File$name )) == 0 ||
+           length(grep(".MRK|.mrk",input$mrkOrEventsFile$name )) == 0 ){
+          
+          showNotification(
+            h4("Make sure your files have the correct extension"), 
+            action = NULL, duration = 5, type = "warning")
+          return()
+        }
+        
+        #### Se asegura que los archivos tengan la extensión correcta
+        if(input$modo %in% "mrkMode"){
+            
+            ## Lee el archivo .MRK directamente
+            datos$archivoMrkOrEvents<-read.table(file= input$mrkOrEventsFile$datapath)
+            
+        } else if(input$modo %in% "reach"){
+            ####lee el archivo
+            archivoEventsEncabezado<- read.delim(file= input$mrkOrEventsFile$datapath, sep="\t", header = FALSE)
+            ###Encuentra el renglón donde empieza el encabezado
+            for(i in 1:30){
+                if(length(grep("latitude",  archivoEventsEncabezado[i,1],fixed = TRUE)) %in% 0){
+                    i = i +1
+                }else{
+                    ren_encabezado = i ## Encuentra el renglón donde empiezan los datos
+                    break;
+                }
+            }
+            #########lee de nuevo el archivo pero ahora tomando en cuenta el encabezado para leer solo la tabla y lo guarda en un valor reactivo
+            datos$archivoMrkOrEvents<-read.table(file= input$mrkOrEventsFile$datapath, skip = i, header = F)
+            
+            
+        } else if(input$modo %in% "x5metta"){
+          ####lee el archivo
+          archivoEventsEncabezado<- read.delim(file= input$mrkOrEventsFile$datapath, sep="\t", header = FALSE)
+          ###Encuentra el renglón donde empieza el encabezado
+          for(i in 1:30){
+            if(length(grep("latitude",  archivoEventsEncabezado[i,1],fixed = TRUE)) %in% 0){
+              i = i +1
+            }else{
+              ren_encabezado = i ## Encuentra el renglón donde empiezan los datos
+              break;
+            }
+          }
+          #########lee de nuevo el archivo pero ahora tomando en cuenta el encabezado para leer solo la tabla y lo guarda en un valor reactivo
+          datos$archivoMrkOrEvents<-read.table(file= input$mrkOrEventsFile$datapath, skip = i, header = F)
+          
+          
+        } else {
+          NULL
+        }
+        
+
+   
+        ############################Crea el archivo .pos a partir de rtklib
+        ## Lee cada uno de los archivos y los guarda en archivos temporales para llamarlos después con rtklib
+        obs <- readLines(con= input$obsFile$datapath)
+        obsTemp <- tempfile(fileext = ".obs")
+        writeLines(obs ,
+                   con = obsTemp)
+        
+        O20 <- readLines(input$O20File$datapath)
+        O20Temp <- tempfile(fileext = ".20O")
+        writeLines(O20,
+                   con = O20Temp)
+  
+        navList <- list()
+        navTempList <- list()
+        for(i in 1:length(input$navFiles[,1])){
+          navList[[i]] <- readLines(input$navFiles[[i, 'datapath']])
+          
+          navTempList[[i]] <- tempfile(fileext = gsub(".*(\\..*)$", "\\1", input$navFiles[[i, 'name']]))
+        
+          writeLines(navList[[i]],
+                     con = navTempList[[i]])
+        }
+        
+        navTem <- paste(navTempList %>% unlist(), collapse = " ") ## Pega todos las direcciones temporales de los archivos nav
+        
+        ## Escribe el archivo de configuraciones a partir del template
+        rtklibConf <- readLines("www/ppksettings.conf")
+        rtklibConf <- gsub("pos2-armode        =fix-and-hold",paste0("pos2-armode        =", input$pos2armode), rtklibConf)
+        rtklibConf <- gsub("pos1-soltype       =combined",paste0("pos1-soltype       =", input$pos1soltype), rtklibConf)
+        rtklibConf <- gsub("pos1-navsys        =37",paste0("ant2-anttype       =", (sum(as.numeric(input$pos1navsys)))), rtklibConf)
+        rtklibConf <- gsub("ant2-anttype       =GMXZENITH35",paste0("ant2-anttype       =", input$antenas), rtklibConf)
+        rtklibConf <- gsub("ant2-postype       =llh","ant2-postype       =llh", rtklibConf)
+        rtklibConf <- gsub("aout-timesys        =gpst",paste0("out-timesys        =", input$timeFormat), rtklibConf)
+        ###Convierte coordenadas de grados minutos y segundos a grados si es necesario
+        if(input$isDMS){
+          latitudeBase <- (input$degLatBase + (input$minLatBase / 60) + (input$secLatBase / 3600)) * ifelse(input$cardinalLatBase == "S", -1, 1)
+          longitudeBase <- (input$degLongBase + (input$minLongBase / 60) + (input$secLongBase / 3600)) * ifelse(input$cardinalLongBase == "W", -1, 1)
+        } else {
+          latitudeBase <- input$LatBase
+          longitudeBase <- input$LonBase
+        }
+        rtklibConf <- gsub("ant2-pos1          =-12.725475796",paste0("ant2-pos1          =", latitudeBase), rtklibConf)
+        rtklibConf <- gsub("ant2-pos2          =-76.624002854",paste0("ant2-pos2          =", longitudeBase), rtklibConf)
+        rtklibConf <- gsub("ant2-pos3          =67.819",paste0("ant2-pos3          =", input$AltBase), rtklibConf)
+        rtklibConf <- gsub("ant2-pos3          =67.819",paste0("ant2-pos3          =", input$AltBase), rtklibConf)
+        rtklibConf <- gsub("ant2-antdelu       =1.7",paste0("ant2-antdelu       =", input$PoleLeng), rtklibConf)
+        
+        confTemp <- tempfile(fileext = ".conf")
+        writeLines(rtklibConf,
+                   con = confTemp)
+    
+        
+        ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
+        rtklibPosFile <- system(paste(
+          'www\\rnx2rtkp.exe -k',
+          confTemp,
+          obsTemp,
+          O20Temp,
+          navTem,
+          sep = " "
+        ) , intern= TRUE, ignore.stderr = TRUE)
+        
+        TempPosFile <- tempfile(fileext = ".pos")
+        writeLines(rtklibPosFile,
+                   con = TempPosFile)
+        
+        ##Lee el archivo .pos pero se asegura de que el encabezado sea el correcto y de leer el punto de control
+        archivoPosEncabezado<- read.delim(file= TempPosFile, sep="\t", header = FALSE)
+        
+        ### Busca el encabezado en el archivo .pos
+        #######Solo busca en los primeros 50 renglone ara evitar un loop infinito
+        for(i in 1:30){
+            if(length(grep("latitude",  archivoPosEncabezado[i,1],fixed = TRUE)) %in% 0){
+                i = i +1
+            }else{
+                ren_encabezado = i ## Encuentra el renglón donde empiezan los datos
+                break;
+            }
+        }
+        #########lee el pos file creado por rtklib
+        datos$archivoPos<-read.table(file= TempPosFile, skip = i-1, header = T)
+        
+        
+        ### Busca el renglón donde se enceuntra el punto de referencia (ref pos)
+        #######Solo busca en los primeros 50 renglone ara evitar un loop infinito
+        for(i in 1:30){
+            if(length(grep("ref pos",  archivoPosEncabezado[i,1],fixed = TRUE)) %in% 0){
+                i = i +1
+            }else{
+                renglonReferencia = i ## Encuentra el renglón donde está el punto de referncia
+                break;
+            }
+        }
+        puntoReferencia<- as.character(archivoPosEncabezado[renglonReferencia,1]) %>%
+            strsplit( ":") %>%
+            unlist()
+        
+        coordenadasReferencia<-as.character(puntoReferencia[2]) %>%
+            strsplit("[| ]+") %>%
+            unlist() %>%
+            as.numeric()
+        
+        ####Guarda las coordenadas del punto de referencia dentro de los valores reactivos
+        datos$coordenadasReferencia<-coordenadasReferencia
+        
+        
+        
+        
+        ### Solo se asegura de que este preproceso se realice antes de calcular la interpolación
+        datos$preProceso <- TRUE
+    })
+    
+    ## Renderiza la tabla rinex y la tabla Mrk con los datos cargados por los usuarios
+    output$tablaRinex<- renderDataTable({
+        req(datos$archivoPos)
+        
+        datatable(datos$archivoPos, options = list(
+            pageLength = 15,
+            scrollX = TRUE
+        ))
+          
+    })
+    
+    output$tablaMrk<- renderDataTable({
+        req(datos$archivoMrkOrEvents)
+        
+        datatable(datos$archivoMrkOrEvents, options = list(
+            pageLength = 15,
+            scrollX = TRUE
+        ))
+        
+    })
+    
+    
+    
+    #############Renderiza mapa
+    
+    output$mapa <- renderLeaflet({
+        
+        mapa<-leaflet() %>% 
+            addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap.Mapnik") %>%
+            addProviderTiles(providers$Esri.WorldImagery, group = "Esri.WorldImagery") %>%
+            addLayersControl(
+                baseGroups = c("Esri.WorldImagery", "OpenStreetMap.Mapnik"),
+                options = layersControlOptions(collapsed = TRUE)
+            )
+        
+        
+        mapa%>%addMeasure(
+            position = "bottomleft",
+            primaryLengthUnit = "meters",
+            primaryAreaUnit = "sqmeters",
+            activeColor = "#3D535D",
+            completedColor = "#7D4479",
+            localization = "es"
+            ) %>%
+            addControl(actionButton("reset","", icon= icon("sync-alt")),position="bottomright")
+    })
+    
+    ### Mapa proxy
+    map_proxy<-leaflet::leafletProxy("mapa")
+    
+    
+    
+    
+    ############ depliega boton para hace el cálculo
+    output$mostrarResultados<- renderUI(expr = if(!is.null(datos$archivoMrkOrEvents) && !is.null(datos$archivoPos)){
+        req(datos$preProceso %in% TRUE)
+        div(
+            h3("Interpolation"),
+            actionButton("iniciar", "Start", class = "btn-success")
+        )
+    })
+    
+    output$botonDescarga<- renderUI(expr = if(!is.null(datos$resultados)){
+        div(
+            h3("Download results"),
+            downloadButton("descargaInterpolacionCsv", label = "Download(.csv)"),
+            br(),
+            downloadButton("descargaInterpolacionTxt", label = "Download(.txt)"),
+            br(),
+            downloadButton("descargaPointsKML", label = "Download KML"),
+            
+            HomePointModuleUI("homePointID")
+        )
+    } else {
+        NULL
+    })
+    
+    
+    observeEvent(input$iniciar,{
+        showModal(
+            modalDialog(title = "Interpolation",
+                        HTML('
+                             <div class="form-group shiny-input-container">
+                                <label class="control-label" id="carpetImagenes-label" for="carpetImagenes">Upload all photos</label>
+                                <div class="input-group">
+                                  <label class="input-group-btn input-group-prepend">
+                                    <span class="btn btn-default btn-file">
+                                      Browse...
+                                      <input id="carpetImagenes" name="carpetImagenes" onchange="showname()" multiple type="file" style="position: absolute !important; top: -99999px !important; left: -99999px !important;" multiple="multiple accept="image/png, image/gif, image/jpeg""/>
+                                    </span>
+                                  </label>
+                                  <input type="text" class="form-control" placeholder="No file selected" readonly="readonly"/>
+                                </div>
+                              </div>
+                             '),
+                        easyClose = FALSE,
+                        size = "m",
+                        footer = tagList(
+                            actionButton("cancelar","Cancel"),
+                            actionButton("interpolar","Start", class = "btn-success")
+                        ) 
+            )
+        )
+    })
+    
+    observeEvent(input$interpolar, {
+        
+        req(datos$archivoPos)
+        req(datos$archivoMrkOrEvents)
+        req(input$photosNames)
+        
+        
+        removeModal()
+        
+        
+        rinex <- as.data.frame(datos$archivoPos)
+        
+        MrkorEvents <- datos$archivoMrkOrEvents
+        if(input$modo %in% c("reach","x5metta")){
+            MrkorEvents$V2 <- MrkorEvents$V2 + input$defaultNumber
+        }
+        mrk <- as.data.frame(MrkorEvents)
+        
+  
+        ### Asegurarse de que los nombres de las columnas sean los correctos para poder manejar las columnas
+        
+        #Se crean matrices con los nombres de nuestros dato para despu?s agragarlas como columnas al data frame final
+        gpst <- matrix(nrow = nrow(mrk), ncol = 1)
+        referencia_inf <- matrix(nrow = nrow(mrk), ncol = 1)
+        referencia_sup <- matrix(nrow = nrow(mrk), ncol = 1)
+        valor_inf <- matrix(nrow = nrow(mrk), ncol = 1)
+        valor_sup <- matrix(nrow = nrow(mrk), ncol = 1)
+        peso_inf <- matrix(nrow = nrow(mrk), ncol = 1)
+        peso_sup <- matrix(nrow = nrow(mrk), ncol = 1)
+        latitude <- matrix(nrow = nrow(mrk), ncol = 1)
+        longitude <- matrix(nrow = nrow(mrk), ncol = 1)
+        height <- matrix(nrow = nrow(mrk), ncol = 1)
+        sdn <- matrix(nrow = nrow(mrk), ncol = 1)
+        sde <- matrix(nrow = nrow(mrk), ncol = 1)
+        sdu <- matrix(nrow = nrow(mrk), ncol = 1)
+
+        #Se obtiene el valor m?nimo de nuestros datos, as? como el intervalo en el que varian
+        
+        
+        for (i in 1:nrow(mrk)){
+            #Se encuntran los valores superior e inferior 
+            valor_inf_valor <- tail(rinex$GPST[rinex$GPST<mrk$V2[i]], n=1)
+            valor_sup_valor <- rinex$GPST[rinex$GPST>mrk$V2[i]][1]
+            
+            #Con los valores se obtienen las referencias o indices
+            
+            referencia_inf_valor <- which(rinex$GPST==valor_inf_valor)
+            referencia_sup_valor <- which(rinex$GPST==valor_sup_valor)
+            ## Condición que se asegura de que haya un valor de referencia sino detiene el proceso
+            
+    
+            #print(valor_inf_valor)
+            #print(mrk$V2[i])
+            #print(valor_sup_valor)
+            
+            #Con los valores superior e inferior se obtienen los pesos inferior y superior
+            peso_inf_valor <- (valor_sup_valor-mrk$V2[i])/(valor_sup_valor - valor_inf_valor)
+            peso_sup_valor <- (mrk$V2[i]-valor_inf_valor)/(valor_sup_valor - valor_inf_valor)
+            
+            ## Condición que se asegura que haya un valor inferior y superior si no detiene el proceso
+            if(!is.na(peso_inf_valor)){
+              #Con los pesos se obitiene los demas datos y se les asignan a sus respectivas matrices
+              latitude_valor <- rinex$latitude.deg.[referencia_inf_valor]*peso_inf_valor+rinex$latitude.deg.[referencia_sup_valor]*peso_sup_valor
+              longitude_valor <- rinex$longitude.deg.[referencia_inf_valor]*peso_inf_valor+rinex$longitude.deg.[referencia_sup_valor]*peso_sup_valor
+              height_valor <- rinex$height.m.[referencia_inf_valor]*peso_inf_valor+rinex$height.m.[referencia_sup_valor]*peso_sup_valor
+              sdn_valor <- rinex$sdn.m.[referencia_inf_valor]*peso_inf_valor+rinex$sdn.m.[referencia_sup_valor]*peso_sup_valor
+              sde_valor <- rinex$sde.m.[referencia_inf_valor]*peso_inf_valor+rinex$sde.m.[referencia_sup_valor]*peso_sup_valor
+              sdu_valor <- rinex$sdu.m.[referencia_inf_valor]*peso_inf_valor+rinex$sdu.m.[referencia_sup_valor]*peso_sup_valor
+              
+              
+              #print(longitude_valor)
+              #print(height_valor)
+              gpst[i] <- mrk$V2[i]
+              referencia_inf[i] <- referencia_inf_valor
+              referencia_sup[i] <- referencia_sup_valor
+              valor_inf[i] <- valor_inf_valor
+              valor_sup[i] <- valor_sup_valor
+              peso_inf[i] <- peso_inf_valor
+              peso_sup[i] <- peso_sup_valor
+              latitude[i] <- latitude_valor
+              longitude[i] <- longitude_valor
+              height[i] <- height_valor
+              sdn[i] <- sdn_valor
+              sde[i] <- sde_valor
+              sdu[i] <- sdu_valor
+            }
+            #print(peso_inf_valor)
+            #print(peso_sup_valor)
+            
+          
+            
+        }
+        print("good")
+        resultados <- data.frame(gpst, referencia_inf, referencia_sup, valor_inf, valor_sup, peso_inf, peso_sup, latitude, longitude, height, sdn, sde, sdu)
+        
+        # Añade la corrección de milímetros SOLO si se tiene un archivo .mrk y lo sobreescribe sobre la variable resultados
+        if(input$modo %in% c("mrkMode")) {
+          ## crea un objeto sf para manejar la información espacial de una mejor manera
+          resultadosSf <- st_as_sf(resultados, coords = c("longitude", "latitude"), crs = 4326) 
+          
+          ## Obtiene el centroide para calcular el CRS temporal
+          sflon <- mean(st_coordinates(resultadosSf)[,1])
+          sflat <- mean(st_coordinates(resultadosSf)[,2])
+          
+          # Se calcula la zona horaria a partir de la longitud
+          zonaUTM <- trunc((sflon/6) +31)
+          # Se calcula el hemiferio de acuerdo al signo
+          hemiferioUTM <- ifelse(sflat < 0,7, 6)
+          
+          # Transforma los resultados al nuevo CRS calculado
+          resultadosSfTransformedCoor <- resultadosSf %>% st_transform(as.numeric(paste0("32", hemiferioUTM, zonaUTM))) %>% st_coordinates()
+          
+          # Pega las coordenados al model Sf para tener todo en una sola tabla
+          resultadosSfcorrection <- cbind(resultadosSf, resultadosSfTransformedCoor) %>% st_drop_geometry()
+          
+          ## Hace las correcciones necesarias
+          resultadosSfcorrection$height <- resultadosSfcorrection$height - (as.numeric(gsub(",V","", mrk[,6])) * 0.001)
+          resultadosSfcorrection$X <- resultadosSfcorrection$X + (as.numeric(gsub(",E","", mrk[,5])) * 0.001)
+          resultadosSfcorrection$Y <- resultadosSfcorrection$Y + (as.numeric(gsub(",N","", mrk[,4])) * 0.001)
+          
+  
+          # Vuelve a convertir los datos a SF
+          resultadosSfcorrectionUTM <- st_as_sf(resultadosSfcorrection, coords = c("X", "Y"),crs = as.numeric(paste0("32", hemiferioUTM, zonaUTM))) %>% st_transform(4326)
+          
+       
+          ## Crea un nuevo data frame de resultados con las correcciones
+          resultados <- cbind(
+            resultados[,c("gpst", "referencia_inf", "referencia_sup", "valor_inf", "valor_sup", "peso_inf", "peso_sup")],
+            resultadosSfcorrectionUTM %>% select(height) %>% st_drop_geometry,
+            st_coordinates(resultadosSfcorrectionUTM),
+            resultados[,c(  "sdn", "sde", "sdu")]
+          ) %>% rename(latitude = Y, longitude = X)
+          
+        }
+         
+        ###Nombra los puntos de acuerdo a la carpeta o al nombre de la primera imagen de acuerdo al
+        #tipo de proceso
+        if(nrow(resultados) != length(input$photosNames)){
+          showModal(
+            modalDialog(
+              title = h3("Error", style="color:red;"),
+              fluidRow(
+                column(width = 12,
+                       h4("Make Sure the number of photos match with the data. Please try again", style="color:red;"),
+                       h4(paste0("You must upload a total of: ",nrow(resultados), " photos"))
+                )
+              ),
+              easyClose = FALSE,
+              footer = tagList(
+                actionButton("cancelar","Try again")
+              )
+            )
+          )
+          
+          return()
+        } else {
+          ## Lee las otos y hace el match con los datos
+          photos <- data.frame(referencias = input$photosNames)
+          
+          ## Si el número de datos y e número de fotos difiere arroja un warning
+          if(nrow(resultados) != nrow(na.omit(resultados))){
+            showModal(
+              modalDialog(
+                title = h3("Warning", style="color:red;"),
+                fluidRow(
+                  column(width = 12,
+                         h4("The data in the .Mrk file does not match the data in the .pos file", style="color:red;"),
+                         h4(paste0("A total of: ", (nrow(resultados)- nrow(na.omit(resultados))), " photos were ommited"))
+                  )
+                ),
+                easyClose = FALSE,
+                footer = tagList(
+                  actionButton("cancelar","Ok")
+                )
+              )
+            )
+          }
+          
+          ## Guarda los resultados en los valores reactivos omitiendo NA
+          datos$resultados <- cbind(photos, resultados) %>% na.omit(.)
+          #### Renderiza el mapa
+          ###### crea el ícono del punto de referencia
+          
+          #####Crea el vector de colores
+          PrecMedia <- (datos$resultados$sdn + datos$resultados$sde)/ 2
+          coloresMapa <- ifelse(PrecMedia <= 0.015, "#00FF00", 
+                                ifelse( 0.015 < PrecMedia & PrecMedia <= 0.03, "#EEC718",
+                                        ifelse(PrecMedia > 0.03, "#FF4000","#33DAFF")
+                                )
+          )
+          
+          
+          ## Cambia a la página de resultados
+          updateTabsetPanel(session, "tabset1",
+                            selected = "Results")
+          
+          
+        }
+        
+        
+        
+    })
+    
+    ##Crea el mapa
+    observe({
+      req(datos$archivoPos)
+      req(datos$archivoMrkOrEvents)
+      req(input$photosNames)
+      req(!is.null(datos$resultados$longitude))
+      req(input$tabset1 == "Results") ## Se asegura que se renderize primero el panel y depués el proxy de leaflet
+      
+      #### Renderiza el mapa
+      ###### crea el ícono del punto de referencia
+      
+      #####Crea el vector de colores
+      PrecMedia <- (datos$resultados$sdn + datos$resultados$sde)/ 2
+      coloresMapa <- ifelse(PrecMedia <= 0.015, "#00FF00", 
+                            ifelse( 0.015 < PrecMedia & PrecMedia <= 0.03, "#EEC718",
+                                    ifelse(PrecMedia > 0.03, "#FF4000","#33DAFF")
+                            )
+      )
+      
+      ## Crea una capa temporal con el punto de referencia y los puntos de las fotos para utilizarlo
+      ## En el fitBound()
+      
+      bounds <- data.frame(longitude = c(datos$coordenadasReferencia[2], datos$resultados$longitude),
+                           latitude= c(datos$coordenadasReferencia[1],datos$resultados$latitude))
+      
+      map_proxy %>% 
+        clearShapes() %>%
+        clearMarkers() %>%
+        addCircleMarkers(lng = datos$resultados$longitude, lat = datos$resultados$latitude, 
+                         color = coloresMapa,group="Flight points",
+                         popup = paste("Reference: ", datos$resultados$referencias, "<br>",
+                                       "Latitude: ",datos$resultados$latitude,"<br>",
+                                       "Longitude: ",datos$resultados$longitude,"<br>",
+                                       "sdn: ",datos$resultados$sdn, "<br>",
+                                       "sde: ", datos$resultados$sde, "<br>",
+                                       "sdu: ", datos$resultados$sdu, "<br>")
+        ) %>%
+        fitBounds(min(bounds$longitude), min(bounds$latitude), max(bounds$longitude), max(bounds$latitude)) %>%
+        addAwesomeMarkers(lng = datos$coordenadasReferencia[2], lat = datos$coordenadasReferencia[1], 
+                          group = "Reference point", icon = icon("home"),
+                          popup = paste("Reference point", "<br>",
+                                        "Latitude: ", datos$coordenadasReferencia[1], "<br>",
+                                        "Longitude: ",datos$coordenadasReferencia[2],"<br>",
+                                        "Ellipsoidal height: ",datos$coordenadasReferencia[3],"<br>")
+        ) %>%
+        removeLayersControl()%>%
+        addLayersControl(
+          baseGroups = c("OpenStreetMap.Mapnik", "Esri.WorldImagery"),
+          overlayGroups = c("Flight points", "Reference point"),
+          options = layersControlOptions(collapsed = TRUE)
+        )
+    })
+    
+    ###Refresca la pantalla del mapa
+    observeEvent(input$reset,{
+        req(datos$archivoPos)
+        req(datos$archivoMrkOrEvents)
+        req(input$photosNames)
+        
+        #### Renderiza el mapa
+        ###### crea el ícono del punto de referencia
+        
+        #####Crea el vector de colores
+        PrecMedia <- (datos$resultados$sdn + datos$resultados$sde)/ 2
+        coloresMapa <- ifelse(PrecMedia <= 0.015, "#00FF00", 
+                              ifelse( 0.015 < PrecMedia & PrecMedia <= 0.03, "#EEC718",
+                                      ifelse(PrecMedia > 0.03, "#FF4000","#33DAFF")
+                              )
+        )
+        
+        ## Crea una capa temporal con el punto de referencia y los puntos de las fotos para utilizarlo
+        ## En el fitBound()
+        
+        bounds <- data.frame(longitude = c(datos$coordenadasReferencia[2], datos$resultados$longitude),
+                             latitude= c(datos$coordenadasReferencia[1],datos$resultados$latitude))
+        
+        map_proxy %>% 
+            clearShapes() %>%
+            clearMarkers() %>%
+            addCircleMarkers(lng = datos$resultados$longitude, lat = datos$resultados$latitude, 
+                             color = coloresMapa,group="Flight points",
+                             popup = paste("Reference: ", datos$resultados$referencias, "<br>",
+                                           "Latitude: ",datos$resultados$latitude,"<br>",
+                                           "Longitude: ",datos$resultados$longitude,"<br>",
+                                           "sdn: ",datos$resultados$sdn, "<br>",
+                                           "sde: ", datos$resultados$sde, "<br>",
+                                           "sdu: ", datos$resultados$sdu, "<br>")
+            ) %>%
+            fitBounds(min(bounds$longitude), min(bounds$latitude), max(bounds$longitude), max(bounds$latitude)) %>%
+            addAwesomeMarkers(lng = datos$coordenadasReferencia[2], lat = datos$coordenadasReferencia[1], 
+                             group = "Reference point", icon = icon("home"),
+                             popup = paste("Reference point", "<br>",
+                                           "Latitude: ", datos$coordenadasReferencia[1], "<br>",
+                                           "Longitude: ",datos$coordenadasReferencia[2],"<br>",
+                                           "Ellipsoidal height: ",datos$coordenadasReferencia[3],"<br>")
+            ) %>%
+            removeLayersControl()%>%
+            addLayersControl(
+                baseGroups = c("OpenStreetMap.Mapnik", "Esri.WorldImagery"),
+                overlayGroups = c("Flight points", "Reference point"),
+                options = layersControlOptions(collapsed = TRUE)
+            )
+    })
+    
+    output$tablaResultados<- renderDataTable({
+        req(datos$resultados)
+        datosResultadosTabla <- datos$resultados
+        
+        
+        datatable(datosResultadosTabla[,c("referencias", "gpst", "latitude", "longitude", "height", "sdn", "sde", "sdu")], 
+                  colnames=c("References", "gpst", "latitude", "longitude", "height", "sdn", "sde", "sdu"),
+                  options = list(
+            pageLength = 10,
+            scrollX = TRUE
+        ))
+    })
+    
+    output$descargaInterpolacionCsv<-  downloadHandler(
+        filename = function() {
+            gsub(".pos","", input$obsFile$name) %>%
+            paste(.,"_geoet", ".csv", sep="") 
+        },
+        content = function(file) {
+            datosR<- datos$resultados[,c("referencias", "latitude", "longitude", "height", "sdn", "sde", "sdu")]
+            names(datosR) <- c("References", "latitude", "longitude", "height", "sdn", "sde", "sdu")
+            write.csv(datosR, file,  row.names = FALSE, quote = FALSE)
+        }
+    )
+    
+    output$descargaInterpolacionTxt<- downloadHandler(
+        filename = function() {
+            gsub(".pos","", input$obsFile$name) %>%
+                paste(.,"_geoet", ".txt", sep="") 
+        },
+        content = function(file) {
+            datosR<- datos$resultados[,c("referencias", "latitude", "longitude", "height", "sdn", "sde", "sdu")]
+            names(datosR) <- c("References", "latitude", "longitude", "height", "sdn", "sde", "sdu")
+            
+            write.table(datosR, file, sep = ",", row.names = FALSE, quote = FALSE)
+        }
+    )
+    
+    
+    
+    output$descargaPointsKML<- downloadHandler(
+        filename = function() {
+            gsub(".pos","", input$obsFile$name) %>%
+                paste(.,"_geoet", ".kml", sep="") 
+        },
+        content = function(file) {
+            datosR<- datos$resultados[,c("referencias", "latitude", "longitude", "height", "sdn", "sde", "sdu")]
+            names(datosR) <- c("References", "latitude", "longitude", "height", "sdn", "sde", "sdu")
+            
+            sfPoints <- st_as_sf(datosR, coords=c("longitude", "latitude"))
+            
+            st_write(sfPoints, file, driver = "kml", delete_dsn = TRUE)
+        }
+    )
+    
+    ############################ Modulos
+    ##Call module
+    callModule(HomePointModuleServer, "homePointID", dataArchivoPos = reactive(datos$archivoPos))
+
+})
