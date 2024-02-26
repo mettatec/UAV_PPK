@@ -491,7 +491,6 @@ shinyServer(function(input, output, session) {
         req(input$mrkOrEventsFile)
         
         ### Se asegura de que se tenga un valor de coordenadas para la base
-        print(input$LatBase)
         if(input$isDMS){
           if(is.na(input$degLatBase) || is.na(input$minLatBase) || is.na(input$secLatBase) || 
              is.na(input$degLongBase) || is.na(input$minLongBase) || is.na(input$secLongBase) ||
@@ -875,7 +874,6 @@ shinyServer(function(input, output, session) {
           
             
         }
-        print("good")
         resultados <- data.frame(gpst, referencia_inf, referencia_sup, valor_inf, valor_sup, peso_inf, peso_sup, latitude, longitude, height, sdn, sde, sdu)
         
         # Añade la corrección de milímetros SOLO si se tiene un archivo .mrk y lo sobreescribe sobre la variable resultados

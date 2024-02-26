@@ -1,0 +1,26 @@
+% program   : RTKLIB ver.demo5 b34d
+% inp file  : C:\Users\Hector\AppData\Local\Temp\RtmpcrWGoL\file4c203775787f.obs
+% inp file  : C:\Users\Hector\AppData\Local\Temp\RtmpcrWGoL\file4c20f6df1f.20O
+% inp file  : C:\Users\Hector\AppData\Local\Temp\RtmpcrWGoL\file4c20352369d2.20G
+% inp file  : C:\Users\Hector\AppData\Local\Temp\RtmpcrWGoL\file4c2030f43e65.20N
+% obs start : 2020/01/09 20:28:34.6 GPST (week2087 419314.6s)
+% obs end   : 2020/01/09 20:34:04.4 GPST (week2087 419644.4s)
+% pos mode  : Kinematic
+% freqs     : L1+L2/E5b
+% solution  : Combined-Phase Reset
+% elev mask : 15.0 deg
+% dynamics  : on
+% tidecorr  : off
+% ionos opt : Broadcast
+% tropo opt : Saastamoinen
+% ephemeris : Broadcast
+% navi sys  : GPS GLONASS Galileo
+% amb res   : Fix and Hold
+% amb glo   : Fix and Hold
+% val thres : 3.0
+% antenna1  :                       ( 0.0000  0.0000  2.0810)
+% antenna2  : GMXZENITH35     NONE  ( 0.0000  0.0000  1.7000)
+% ref pos   :-12.725475796 -76.624002854   67.8190
+%
+% (lat/lon/height=WGS84/ellipsoidal,Q=1:fix,2:float,3:sbas,4:dgps,5:single,6:ppp,ns=# of satellites)
+%  GPST                  latitude(deg) longitude(deg)  height(m)   Q  ns   sdn(m)   sde(m)   sdu(m)  sdne(m)  sdeu(m)  sdun(m) age(s)  ratio

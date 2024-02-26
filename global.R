@@ -16,4 +16,3 @@ options(
   gargle_oauth_email = TRUE,
   shiny.maxRequestSize=30*1024^2
 )
-
