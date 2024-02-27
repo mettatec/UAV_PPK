@@ -5,7 +5,7 @@ source("modules/homePoint-module.R")
 #Server
 shinyServer(function(input, output, session) {
     ##Lee los usuarios del archivo temporal
-    drive_auth(cache = ".secrets")
+    drive_auth(cache = "secrets")
     #importante cambiar a user_base
     drive_download("user_base.csv", overwrite = TRUE)
     user_base <- read.csv("user_base.csv", header = TRUE)
