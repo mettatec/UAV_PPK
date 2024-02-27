@@ -263,7 +263,7 @@ shinyServer(function(input, output, session) {
                     h4("El nombre de usuario ya existe"), 
                     action = NULL, duration = 5, type = "warning")   
             } else {
-                nuevoUsuario<- c(input$usuario, password_store(input$password), input$permisos, input$nombre, input$allowUser)
+                nuevoUsuario<- c(as.character(input$usuario), password_store(input$password), input$permisos, as.character(input$nombre), input$allowUser)
                 
                 nuevaTabla<- rbind(usuarios_base, nuevoUsuario)
                 
