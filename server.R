@@ -8,7 +8,7 @@ shinyServer(function(input, output, session) {
     #drive_auth(cache = "secrets")
     #importante cambiar a user_base
     #drive_download("user_base.csv", overwrite = TRUE)
-    user_base <- read.csv("user_base.csv", header = TRUE)
+    user_base <- read.csv("www/user_base.csv", header = TRUE)
     
     ## Valores reactivos para guardar los usuarios 
     usuarios<- reactiveValues()
@@ -255,7 +255,7 @@ shinyServer(function(input, output, session) {
                 action = NULL, duration = 5, type = "warning")
         } else {
             
-            drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+            #drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
             usuarios_base <- read.csv("www/user_base.csv", header = TRUE)
             
             if(length(which(usuarios_base$user %in% input$usuario))>0){
@@ -269,9 +269,9 @@ shinyServer(function(input, output, session) {
                 
                 ##Sobreescribe temporalmente los nuevos usuarios
                 write.csv(nuevaTabla, "www/user_base.csv", row.names = FALSE)
-                drive_upload("www/user_base.csv", overwrite = TRUE)
+                #drive_upload("www/user_base.csv", overwrite = TRUE)
                 
-                drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+                #drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
                 usuarios$datos <- read.csv("www/user_base.csv", header = TRUE)
                 
                 removeModal()
@@ -319,16 +319,16 @@ shinyServer(function(input, output, session) {
         selecciones_tabla$renglon<-input$user_table_rows_selected
         user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
         
-        drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+        #drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
         usuarios_base <- read.csv("www/user_base.csv", header = TRUE)
         
         nuevaTabla<-usuarios_base[! usuarios_base$user %in% user_removed,]
         
         ##Guarda temporalmente os cambios
         write.csv(nuevaTabla, "www/user_base.csv", row.names = FALSE)
-        drive_upload("www/user_base.csv", overwrite = TRUE)
+        #drive_upload("www/user_base.csv", overwrite = TRUE)
         
-        drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+        #drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
         usuarios$datos <- read.csv("www/user_base.csv", header = TRUE)
         
         
@@ -349,7 +349,7 @@ shinyServer(function(input, output, session) {
       selecciones_tabla$renglon<-input$user_table_rows_selected
       user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
       
-      drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+      #drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
       usuarios_base <- read.csv("www/user_base.csv", header = TRUE)
       
       usuarios_base[which( usuarios_base$user %in% user_removed),"Allow_login"] = TRUE
@@ -358,9 +358,9 @@ shinyServer(function(input, output, session) {
         
       ##Guarda temporalmente os cambios
       write.csv(nuevaTabla, "www/user_base.csv", row.names = FALSE)
-      drive_upload("www/user_base.csv", overwrite = TRUE)
+      #drive_upload("www/user_base.csv", overwrite = TRUE)
       
-      drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+      #drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
       usuarios$datos <- read.csv("www/user_base.csv", header = TRUE)
       
       
@@ -391,9 +391,9 @@ shinyServer(function(input, output, session) {
       
       ##Guarda temporalmente os cambios
       write.csv(nuevaTabla, "www/user_base.csv", row.names = FALSE)
-      drive_upload("www/user_base.csv", overwrite = TRUE)
+      #drive_upload("www/user_base.csv", overwrite = TRUE)
       
-      drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+      #drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
       usuarios$datos <- read.csv("www/user_base.csv", header = TRUE)
       
       
