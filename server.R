@@ -263,7 +263,7 @@ shinyServer(function(input, output, session) {
                     h4("El nombre de usuario ya existe"), 
                     action = NULL, duration = 5, type = "warning")   
             } else {
-                nuevoUsuario<- c(as.character(input$usuario), password_store(input$password), input$permisos, as.character(input$nombre), input$allowUser)
+                nuevoUsuario<- c(input$usuario, password_store(input$password), input$permisos, input$nombre, input$allowUser, NA)
                 
                 nuevaTabla<- rbind(usuarios_base, nuevoUsuario)
                 
@@ -382,7 +382,7 @@ shinyServer(function(input, output, session) {
       selecciones_tabla$renglon<-input$user_table_rows_selected
       user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
       
-      drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
+      #drive_download("user_base.csv", "www/user_base.csv", overwrite = TRUE)
       usuarios_base <- read.csv("www/user_base.csv", header = TRUE)
       
       usuarios_base[which( usuarios_base$user %in% user_removed),"Allow_login"] = FALSE
