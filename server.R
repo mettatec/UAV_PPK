@@ -880,10 +880,10 @@ shinyServer(function(input, output, session) {
         
         # Añade la corrección de milímetros SOLO si se tiene un archivo .mrk y lo sobreescribe sobre la variable resultados
         if(input$modo %in% c("mrkMode")) {
-            print("hello")
+         
           ## crea un objeto sf para manejar la información espacial de una mejor manera
-          resultadosSf <- st_as_sf(resultados, coords = c("longitude", "latitude"), crs = 'ESRI:4326') 
-          print("hi")
+          resultadosSf <- st_as_sf(resultados, coords = c("longitude", "latitude"), crs = 4326) 
+         
           ## Obtiene el centroide para calcular el CRS temporal
           sflon <- mean(st_coordinates(resultadosSf)[,1])
           sflat <- mean(st_coordinates(resultadosSf)[,2])
@@ -893,8 +893,8 @@ shinyServer(function(input, output, session) {
           # Se calcula el hemiferio de acuerdo al signo
           hemiferioUTM <- ifelse(sflat < 0,7, 6)
           # Transforma los resultados al nuevo CRS calculado
-          resultadosSfTransformedCoor <- resultadosSf %>% st_transform(as.numeric(paste0("32", hemiferioUTM, zonaUTM))) %>% st_coordinates()
-          
+          #resultadosSfTransformedCoor <- resultadosSf %>% st_transform(as.numeric(paste0("32", hemiferioUTM, zonaUTM))) %>% st_coordinates()
+          resultadosSfTransformedCoor <- resultadosSf %>% st_transform(3336) %>% st_coordinates()
           # Pega las coordenados al model Sf para tener todo en una sola tabla
           resultadosSfcorrection <- cbind(resultadosSf, resultadosSfTransformedCoor) %>% st_drop_geometry()
           
