@@ -893,7 +893,6 @@ shinyServer(function(input, output, session) {
           # Se calcula el hemiferio de acuerdo al signo
           hemiferioUTM <- ifelse(sflat < 0,7, 6)
           # Transforma los resultados al nuevo CRS calculado
-           cat("okis") 
           resultadosSfTransformedCoor <- resultadosSf %>% st_transform(as.numeric(paste0("32", hemiferioUTM, zonaUTM))) %>% st_coordinates()
           # Pega las coordenados al model Sf para tener todo en una sola tabla
           resultadosSfcorrection <- cbind(resultadosSf, resultadosSfTransformedCoor) %>% st_drop_geometry()
