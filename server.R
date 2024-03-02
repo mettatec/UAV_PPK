@@ -627,11 +627,15 @@ shinyServer(function(input, output, session) {
         datos$borrar <- gsub("/", "\\\\", obsTemp, fixed=TRUE)
         
         ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
+        ## Si usa wine se deben cambiar los paths absolutos de formato ubuntu a formato windows
         rtklibPosFile <- system(paste(
-          "sudo wine /home/ubuntu/shiny/UAV_PPK/www/rnx2rtkp.exe",
+          "sudo wine /home/ubuntu/shiny/UAV_PPK/www/rnx2rtkp.exe k",
+          gsub("/", "\\\\", confTemp, fixed=TRUE) , 
           gsub("/", "\\\\", obsTemp, fixed=TRUE), 
+          gsub("/", "\\\\", O20Temp, fixed=TRUE),  
+          gsub("/", "\\\\", navTem, fixed=TRUE),  
           sep = " "
-        ), intern=TRUE, ignore.stdout = FALSE)
+        ), intern=TRUE, ignore.stderr = TRUE)
         
         TempPosFile <- tempfile(fileext = ".pos")
         writeLines(rtklibPosFile,
