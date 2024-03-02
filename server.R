@@ -618,9 +618,8 @@ shinyServer(function(input, output, session) {
                    con = confTemp)
         ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
         rtklibPosFile <- system(paste(
-          "sudo wine /home/ubuntu/shiny/UAV_PPK/www/rnx2rtkp.exe -r",
-            "ubx", "-v", "3.02", "-od", "-oi", "-ot", "-ol",
-             "-n", navTem, "-o", obsTemp,
+          "sudo wine /home/ubuntu/shiny/UAV_PPK/www/rnx2rtkp.exe",
+          obsTemp, navTem, O20Temp,
           sep = " "
         ) , intern= TRUE, ignore.stderr = TRUE)
         
