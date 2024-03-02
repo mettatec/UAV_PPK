@@ -24,6 +24,9 @@ shinyUI(dashboardPage(
         
         uiOutput("panelPrincipal"),
         
+        #Borrar
+        verbatimTextOutput("borrar")
+        
         HTML('<footer style="background-color:#e3e3e3; height:50px; width:100%;margin-top:100px;">
                 <p>&copy; 2022 Soluciones Geográficas - all rights reserved</p>
               </footer>'
