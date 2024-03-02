@@ -624,7 +624,7 @@ shinyServer(function(input, output, session) {
                    con = confTemp)
 
         #Borrar
-        datos$borrar <- gsub("/", "\\", obsTemp, fixed=TRUE)
+        datos$borrar <- obsTemp
         return()
         ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
         rtklibPosFile <- system(paste(
