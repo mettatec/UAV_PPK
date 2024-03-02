@@ -622,7 +622,7 @@ shinyServer(function(input, output, session) {
             "ubx", "-v", "3.02", "-od", "-oi", "-ot", "-ol",
              "-n", navTem, "-o", obsTemp,
           sep = " "
-        ) , intern= TRUE, ignore.stderr = FALSE)
+        ) , intern= TRUE, ignore.stderr = TRUE)
         
         TempPosFile <- tempfile(fileext = ".pos")
         writeLines(rtklibPosFile,
