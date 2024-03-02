@@ -624,7 +624,7 @@ shinyServer(function(input, output, session) {
           O20Temp,
           navTem,
           sep = " "
-        ) , intern= TRUE, ignore.stderr = TRUE)
+        ) , ignore.stderr = FALSE)
         
         TempPosFile <- tempfile(fileext = ".pos")
         writeLines(rtklibPosFile,
