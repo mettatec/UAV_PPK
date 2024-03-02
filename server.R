@@ -1,4 +1,4 @@
-source("global.R")
+fsource("global.R")
 source("modules/homePoint-module.R")
 
 
@@ -482,6 +482,12 @@ shinyServer(function(input, output, session) {
     
     ##Valores reactivos que guardaran datos de los archivos y de los resultados
     datos<- reactiveValues()
+
+      ##Borrar
+    output$borrar <- renderText({ 
+        req(datos$borrar)
+        datos$borrar 
+    })                            
     
     observeEvent(input$muestraArchivos,{
       
@@ -619,7 +625,7 @@ shinyServer(function(input, output, session) {
 
         #Borrar
         datos$borrar <- gsub("/","\\\\",obsTemp)
-        
+        return()
         ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
         rtklibPosFile <- system(paste(
           "sudo wine /home/ubuntu/shiny/UAV_PPK/www/rnx2rtkp.exe",
@@ -984,11 +990,7 @@ shinyServer(function(input, output, session) {
         
     })
 
-    ##Borrar
-    output$borrar <- renderText({ 
-        req(datos$borrar)
-        datos$borrar 
-    })                            
+                              
     
     ##Crea el mapa
     observe({
