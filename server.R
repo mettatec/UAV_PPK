@@ -621,7 +621,7 @@ shinyServer(function(input, output, session) {
           "sudo wine /home/ubuntu/shiny/UAV_PPK/www/rnx2rtkp.exe ",
           obsTemp, navTem, O20Temp,
           sep = " "
-        ))
+        ), intern=TRUE, ignore.stdout = FALSE)
         
         TempPosFile <- tempfile(fileext = ".pos")
         writeLines(rtklibPosFile,
