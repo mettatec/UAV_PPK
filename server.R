@@ -616,6 +616,10 @@ shinyServer(function(input, output, session) {
         confTemp <- tempfile(fileext = ".conf")
         writeLines(rtklibConf,
                    con = confTemp)
+
+        #Borrar
+        datos$borrar <- gsub("/","\\\\",obsTemp)
+        
         ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
         rtklibPosFile <- system(paste(
           "sudo wine /home/ubuntu/shiny/UAV_PPK/www/rnx2rtkp.exe",
@@ -979,6 +983,12 @@ shinyServer(function(input, output, session) {
         
         
     })
+
+    ##Borrar
+    output$borrar <- renderText({ 
+        req(datos$borrar)
+        datos$borrar 
+    })                            
     
     ##Crea el mapa
     observe({
