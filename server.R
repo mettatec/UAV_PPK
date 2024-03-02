@@ -1,4 +1,4 @@
-source("global.R")
+fsource("global.R")
 source("modules/homePoint-module.R")
 
 
@@ -624,7 +624,7 @@ shinyServer(function(input, output, session) {
                    con = confTemp)
 
         #Borrar
-        datos$borrar <- gsub("/","\\\\",obsTemp)
+        datos$borrar <- gsub("/","\\\\\\",obsTemp)
         return()
         ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
         rtklibPosFile <- system(paste(
