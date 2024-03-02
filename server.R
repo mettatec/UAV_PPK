@@ -620,7 +620,7 @@ shinyServer(function(input, output, session) {
         write.csv(rtklibConf,"www/rtklibConf_example.csv")
         ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
         rtklibPosFile <- system(paste(
-          'wine www/rnx2rtkp.exe -k',
+          "sudo wine /home/ubuntu/shiny/UAV_PPK/www/rnx2rtkp.exe -k",
           confTemp,
           obsTemp,
           O20Temp,
