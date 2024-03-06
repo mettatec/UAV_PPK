@@ -14,6 +14,6 @@ library(googledrive)
 options(
   #gargle_oauth_cache = "secrets",
   #gargle_oauth_email = TRUE,
-  shiny.maxRequestSize=100*1024^2
+  shiny.maxRequestSize=200*1024^2
 )
 
