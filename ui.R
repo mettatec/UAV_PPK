@@ -19,7 +19,7 @@ shinyUI(dashboardPage(
             tags$script(src = "shinyjsComplements.js")
         ),
         # add login panel UI function
-        shinyauthr::loginUI(id = "login", title= div(img(src="SG Logo.png", align="center", style="width:60%; height:60%;"),
+        shinyauthr::loginUI(id = "login", title= div(img(src="mettatec_logo.png", align="center", style="width:60%; height:60%;"),
                                                      h2("Log In"))),
         
         uiOutput("panelPrincipal"),
