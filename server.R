@@ -148,7 +148,8 @@ shinyServer(function(input, output, session) {
                                          div(
                                              uiOutput("fileTitle"),
                                              dataTableOutput("tablaMrk")
-                                         )
+                                         ),
+                                         verbatimTextOutput("confFile") #Borrar
                                      )
                                      
                                  )
