@@ -566,7 +566,12 @@ shinyServer(function(input, output, session) {
         }
         
 
-   
+        ##Borrar
+        output$summary <- renderText({
+            req(datos$confData)
+            datos$confData
+        })
+            
         ############################Crea el archivo .pos a partir de rtklib
         ## Lee cada uno de los archivos y los guarda en archivos temporales para llamarlos después con rtklib
         obs <- readLines(con= input$obsFile$datapath)
@@ -617,6 +622,9 @@ shinyServer(function(input, output, session) {
         confTemp <- tempfile(fileext = ".conf")
         writeLines(rtklibConf,
                    con = confTemp)
+
+        ##Borrar 
+        datos$confData <- rtklibConf
         
         ## Crea el archivo .pos a partir de rtklib (ejecutable externo) y lo guarda en un archivo temporal
         ## Si usa wine se deben cambiar los paths absolutos de formato ubuntu a formato windows
