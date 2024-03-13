@@ -567,7 +567,7 @@ shinyServer(function(input, output, session) {
         
 
         ##Borrar
-        output$summary <- renderText({
+        output$confFile <- renderText({
             req(datos$confData)
             datos$confData
         })
