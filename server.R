@@ -8,7 +8,7 @@ shinyServer(function(input, output, session) {
     #drive_auth(cache = "secrets")
     #importante cambiar a user_base
     #drive_download("user_base.csv", overwrite = TRUE)
-    user_base <- read.csv("user_base.csv", header = TRUE)
+    user_base <- readRDS("user_base.rds")
     
     ## Valores reactivos para guardar los usuarios 
     usuarios<- reactiveValues()
@@ -257,7 +257,7 @@ shinyServer(function(input, output, session) {
         } else {
             
             #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-            usuarios_base <- read.csv("user_base.csv", header = TRUE)
+            usuarios_base <- readRDS(file ="user_base.csv")
             
             if(length(which(usuarios_base$user %in% input$usuario))>0){
                 showNotification(
@@ -269,11 +269,11 @@ shinyServer(function(input, output, session) {
                 nuevaTabla<- rbind(usuarios_base, nuevoUsuario)
                 
                 ##Sobreescribe temporalmente los nuevos usuarios
-                write.csv(nuevaTabla, "user_base.csv", row.names = FALSE)
+                saveRDS(nuevaTabla, file = "user_base.rds",)
                 #drive_upload("user_base.csv", overwrite = TRUE)
                 
                 #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-                usuarios$datos <- read.csv("user_base.csv", header = TRUE)
+                usuarios$datos <- readRDS(file ="user_base.csv")
                 
                 removeModal()
                 
@@ -321,16 +321,16 @@ shinyServer(function(input, output, session) {
         user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
         
         #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-        usuarios_base <- read.csv("user_base.csv", header = TRUE)
+        usuarios_base <- readRDS(file ="user_base.csv")
         
         nuevaTabla<-usuarios_base[! usuarios_base$user %in% user_removed,]
         
         ##Guarda temporalmente os cambios
-        write.csv(nuevaTabla, "user_base.csv", row.names = FALSE)
+        saveRDS(nuevaTabla, file = "user_base.rds",)
         #drive_upload("user_base.csv", overwrite = TRUE)
         
         #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-        usuarios$datos <- read.csv("user_base.csv", header = TRUE)
+        usuarios$datos <- readRDS(file ="user_base.csv")
         
         
         removeModal()
@@ -351,18 +351,18 @@ shinyServer(function(input, output, session) {
       user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
       
       #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-      usuarios_base <- read.csv("user_base.csv", header = TRUE)
+      usuarios_base <- readRDS(file ="user_base.csv")
       
       usuarios_base[which( usuarios_base$user %in% user_removed),"Allow_login"] = TRUE
      
       nuevaTabla <- usuarios_base
         
       ##Guarda temporalmente os cambios
-      write.csv(nuevaTabla, "user_base.csv", row.names = FALSE)
+      saveRDS(nuevaTabla, file = "user_base.rds",)
       #drive_upload("user_base.csv", overwrite = TRUE)
       
       #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-      usuarios$datos <- read.csv("user_base.csv", header = TRUE)
+      usuarios$datos <- readRDS(file ="user_base.csv")
       
       
       removeModal()
@@ -384,18 +384,18 @@ shinyServer(function(input, output, session) {
       user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
       
       #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-      usuarios_base <- read.csv("user_base.csv", header = TRUE)
+      usuarios_base <- readRDS(file ="user_base.csv")
       
       usuarios_base[which( usuarios_base$user %in% user_removed),"Allow_login"] = FALSE
     
       nuevaTabla <- usuarios_base
       
       ##Guarda temporalmente os cambios
-      write.csv(nuevaTabla, "user_base.csv", row.names = FALSE)
+      saveRDS(nuevaTabla, file = "user_base.rds",)
       #drive_upload("user_base.csv", overwrite = TRUE)
       
       #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-      usuarios$datos <- read.csv("user_base.csv", header = TRUE)
+      usuarios$datos <- readRDS(file ="user_base.csv")
       
       
       removeModal()
