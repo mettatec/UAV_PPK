@@ -4,7 +4,7 @@ source("modules/homePoint-module.R")
 # Define UI for application that draws a histogram
 shinyUI(dashboardPage(
     skin = "black",
-    dashboardHeader(title = "UAV-PPK",
+    dashboardHeader(title = "Mettatec Apps | UAV PPK", titleWidth = 280,
                     tags$li(class="dropdown",div(class= "btn-auth",
                                                  shinyauthr::logoutUI(id = "logout", label = "Exit")),
                             
