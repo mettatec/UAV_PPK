@@ -16,18 +16,26 @@ shinyUI(dashboardPage(
     dashboardBody(
         tags$head(
             tags$link(rel="shortcut icon", href="favicon.ico"),
-            tags$script(src = "shinyjsComplements.js")
+            tags$script(src = "shinyjsComplements.js"),
+            tags$footer("© 2024 Mettatec - all rights reserved", # strong() = bold
+                        align = "center", 
+                        style = "
+                 position:fixed;
+                 bottom:0px;
+                 width:100%;
+                 height:40px; 
+                 color: black;
+                 font-size:15px;
+                 padding: 0px;
+                 background-color: #e3e3e3;
+                 z-index: 100;
+                ")
         ),
         # add login panel UI function
         shinyauthr::loginUI(id = "login", title= div(img(src="mettatec_logo.png", align="center", style="width:60%; height:60%;"),
                                                      h2("Log In"))),
         
-        uiOutput("panelPrincipal"),
-        
-        HTML('<footer style="background-color:#e3e3e3; height:50px; width:100%;margin-top:100px;">
-                <p>&copy; 2024 Mettatec - all rights reserved</p>
-              </footer>'
-             )
+        uiOutput("panelPrincipal")
     
     )
 ))
