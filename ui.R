@@ -15,7 +15,7 @@ shinyUI(dashboardPage(
     ),
     dashboardBody(
         tags$head(
-            tags$link(rel="shortcut icon", href="favicon-16x16.png"),
+            tags$link(rel="shortcut icon", href="favicon.ico"),
             tags$script(src = "shinyjsComplements.js")
         ),
         # add login panel UI function
