@@ -34,8 +34,14 @@ shinyUI(dashboardPage(
         # add login panel UI function
         shinyauthr::loginUI(id = "login", title= div(img(src="mettatec_logo.png", align="center", style="width:60%; height:60%;"),
                                                      h2("Log In"))),
-        
-        uiOutput("panelPrincipal")
+        ##Conditional panels for the loading page
+        conditionalPanel(
+          condition = "output.setupComplete",
+          uiOutput("panelPrincipal")),
+        conditionalPanel(
+          condition = "!output.setupComplete",
+          div(img(src="mettatec.gif", style = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);'))
+        )
     
     )
 ))
