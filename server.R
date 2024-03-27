@@ -7,7 +7,7 @@ shinyServer(function(input, output, session) {
     ##Lee los usuarios del archivo temporal
     #drive_auth(cache = "secrets")
     #importante cambiar a user_base
-    #drive_download("user_base.csv", overwrite = TRUE)
+    #drive_download("user_base.rds", overwrite = TRUE)
 
     ##Valores reactivos y se asigna un valor false para indicar que la página no está completamente cargada
     settingsData <- reactiveValues()
@@ -262,8 +262,8 @@ shinyServer(function(input, output, session) {
                 action = NULL, duration = 5, type = "warning")
         } else {
             
-            #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-            usuarios_base <- readRDS(file ="user_base.csv")
+            #drive_download("user_base.rds", "user_base.rds", overwrite = TRUE)
+            usuarios_base <- readRDS(file ="user_base.rds")
             
             if(length(which(usuarios_base$user %in% input$usuario))>0){
                 showNotification(
@@ -276,10 +276,10 @@ shinyServer(function(input, output, session) {
                 
                 ##Sobreescribe temporalmente los nuevos usuarios
                 saveRDS(nuevaTabla, file = "user_base.rds",)
-                #drive_upload("user_base.csv", overwrite = TRUE)
+                #drive_upload("user_base.rds", overwrite = TRUE)
                 
-                #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-                usuarios$datos <- readRDS(file ="user_base.csv")
+                #drive_download("user_base.rds", "user_base.rds", overwrite = TRUE)
+                usuarios$datos <- readRDS(file ="user_base.rds")
                 
                 removeModal()
                 
@@ -326,17 +326,17 @@ shinyServer(function(input, output, session) {
         selecciones_tabla$renglon<-input$user_table_rows_selected
         user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
         
-        #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-        usuarios_base <- readRDS(file ="user_base.csv")
+        #drive_download("user_base.rds", "user_base.rds", overwrite = TRUE)
+        usuarios_base <- readRDS(file ="user_base.rds")
         
         nuevaTabla<-usuarios_base[! usuarios_base$user %in% user_removed,]
         
         ##Guarda temporalmente os cambios
         saveRDS(nuevaTabla, file = "user_base.rds",)
-        #drive_upload("user_base.csv", overwrite = TRUE)
+        #drive_upload("user_base.rds", overwrite = TRUE)
         
-        #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-        usuarios$datos <- readRDS(file ="user_base.csv")
+        #drive_download("user_base.rds", "user_base.rds", overwrite = TRUE)
+        usuarios$datos <- readRDS(file ="user_base.rds")
         
         
         removeModal()
@@ -356,8 +356,8 @@ shinyServer(function(input, output, session) {
       selecciones_tabla$renglon<-input$user_table_rows_selected
       user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
       
-      #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-      usuarios_base <- readRDS(file ="user_base.csv")
+      #drive_download("user_base.rds", "user_base.rds", overwrite = TRUE)
+      usuarios_base <- readRDS(file ="user_base.rds")
       
       usuarios_base[which( usuarios_base$user %in% user_removed),"Allow_login"] = TRUE
      
@@ -365,10 +365,10 @@ shinyServer(function(input, output, session) {
         
       ##Guarda temporalmente os cambios
       saveRDS(nuevaTabla, file = "user_base.rds",)
-      #drive_upload("user_base.csv", overwrite = TRUE)
+      #drive_upload("user_base.rds", overwrite = TRUE)
       
-      #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-      usuarios$datos <- readRDS(file ="user_base.csv")
+      #drive_download("user_base.rds", "user_base.rds", overwrite = TRUE)
+      usuarios$datos <- readRDS(file ="user_base.rds")
       
       
       removeModal()
@@ -389,8 +389,8 @@ shinyServer(function(input, output, session) {
       selecciones_tabla$renglon<-input$user_table_rows_selected
       user_removed <- usuarios$datos[input$user_table_rows_selected,"user"]
       
-      #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-      usuarios_base <- readRDS(file ="user_base.csv")
+      #drive_download("user_base.rds", "user_base.rds", overwrite = TRUE)
+      usuarios_base <- readRDS(file ="user_base.rds")
       
       usuarios_base[which( usuarios_base$user %in% user_removed),"Allow_login"] = FALSE
     
@@ -398,10 +398,10 @@ shinyServer(function(input, output, session) {
       
       ##Guarda temporalmente os cambios
       saveRDS(nuevaTabla, file = "user_base.rds",)
-      #drive_upload("user_base.csv", overwrite = TRUE)
+      #drive_upload("user_base.rds", overwrite = TRUE)
       
-      #drive_download("user_base.csv", "user_base.csv", overwrite = TRUE)
-      usuarios$datos <- readRDS(file ="user_base.csv")
+      #drive_download("user_base.rds", "user_base.rds", overwrite = TRUE)
+      usuarios$datos <- readRDS(file ="user_base.rds")
       
       
       removeModal()
