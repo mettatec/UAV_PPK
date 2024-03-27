@@ -8,6 +8,12 @@ shinyServer(function(input, output, session) {
     #drive_auth(cache = "secrets")
     #importante cambiar a user_base
     #drive_download("user_base.csv", overwrite = TRUE)
+
+    ##Valores reactivos y se asigna un valor false para indicar que la página no está completamente cargada
+    settingsData <- reactiveValues()
+    settingsData$setupComplete <- FALSE
+
+    ## Lee el archivo de usuarios
     user_base <- readRDS("user_base.rds")
     
     ## Valores reactivos para guardar los usuarios 
@@ -1158,5 +1164,13 @@ shinyServer(function(input, output, session) {
     ############################ Modulos
     ##Call module
     callModule(HomePointModuleServer, "homePointID", dataArchivoPos = reactive(datos$archivoPos))
+
+   ########################## Extra
+   ## demuesta que la pagina esta completamente renderizada y quita la pagina de loading
+    settingsData$setupComplete <- TRUE
+    output$setupComplete <- reactive({
+      return(settingsData$setupComplete)
+    })
+    outputOptions(output, 'setupComplete', suspendWhenHidden=FALSE)                             
 
 })
